@@ -22,16 +22,17 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "wacrm",
-    template: "%s — wacrm",
+    default: "Waplence by Splence",
+    template: "%s — Waplence",
   },
-  description: "Self-hostable CRM template for WhatsApp.",
+  description: "Waplence by Splence — WhatsApp CRM and Marketing Platform.",
   robots: {
     index: false,
     follow: false,
   },
   icons: {
-    icon: [{ url: "/icon" }],
+    icon: [{ url: "/logo.png" }],
+    apple: [{ url: "/logo.png" }],
   },
   formatDetection: {
     email: false,
