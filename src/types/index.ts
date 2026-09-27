@@ -52,6 +52,8 @@ export interface Profile {
 // Account-sharing entities (017_account_sharing.sql)
 // ============================================================
 
+export type AccountStatus = 'pending' | 'active' | 'suspended';
+
 export interface Account {
   id: string;
   name: string;
@@ -59,6 +61,8 @@ export interface Account {
   owner_user_id: string;
   created_at: string;
   updated_at: string;
+  status?: AccountStatus;
+  activated_at?: string | null;
 }
 
 /**

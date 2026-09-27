@@ -8,13 +8,16 @@ import { Header } from "@/components/layout/header";
 import { AccountAccessAlert } from "@/components/layout/account-access-alert";
 import { PresenceHeartbeat } from "@/components/presence/presence-heartbeat";
 
+import { createClient } from "@/lib/supabase/client";
+
 // Auth-gated dashboard shell. Extracted from the layout so the layout
 // itself can stay a server component and export metadata (noindex) —
 // client components can't export Next's metadata object.
 
 function DashboardShellInner({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, account, loading, profileLoading } = useAuth();
   const router = useRouter();
+  const supabase = createClient();
 
   // Sidebar drawer state — only used on mobile. On lg+ the sidebar is
   // always visible and this stays at `false` (ignored by the component).
@@ -24,10 +27,14 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
+    } else if (!loading && !profileLoading && (!account || account.status !== "active")) {
+      void supabase.auth.signOut().then(() => {
+        window.location.href = "/login?error=pending";
+      });
     }
-  }, [user, loading, router]);
+  }, [user, loading, profileLoading, account, router, supabase]);
 
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
@@ -38,7 +45,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) return null;
+  if (!user || !account || account.status !== "active") return null;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

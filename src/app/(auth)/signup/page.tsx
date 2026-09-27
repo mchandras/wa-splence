@@ -86,6 +86,23 @@ function SignupPageInner() {
       return;
     }
 
+    // Fire-and-forget notification to the tool owner
+    try {
+      void fetch("/api/account/registration-alert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName, email }),
+      });
+    } catch {
+      // Non-blocking: alert failure shouldn't prevent signup screen
+    }
+
+    // Since this is a new self-registration requiring offline payment verification,
+    // clear any session Supabase automatically established in the browser cookies.
+    if (!inviteToken) {
+      await supabase.auth.signOut();
+    }
+
     setSuccess(true);
     setLoading(false);
   };
@@ -99,12 +116,18 @@ function SignupPageInner() {
               <CheckCircle className="h-6 w-6 text-primary" />
             </div>
             <CardTitle className="text-xl text-foreground">
-              Check your email
+              {inviteToken ? "Check your email" : "Registration Received!"}
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              We&apos;ve sent a confirmation link to{" "}
-              <span className="text-foreground">{email}</span>. Please check your
-              inbox and click the link to verify your account.
+              {inviteToken ? (
+                <>
+                  We&apos;ve sent a confirmation link to{" "}
+                  <span className="text-foreground">{email}</span>. Please check your
+                  inbox and click the link to verify your account.
+                </>
+              ) : (
+                "Your account has been created and is currently awaiting for activation. Our team will verify your account and notify you once ready."
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
