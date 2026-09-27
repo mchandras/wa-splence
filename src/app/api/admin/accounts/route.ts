@@ -74,12 +74,20 @@ export async function GET(request: NextRequest) {
 
   const accounts = (rawAccounts || []) as AccountRow[];
 
-  // Enrich with owner email and name from profiles
+  // Enrich with owner email, name, and contact phone
   const ownerIds = accounts.map((a) => a.owner_user_id).filter(Boolean);
   const { data: rawProfiles } = await adminClient
     .from('profiles')
     .select('user_id, full_name, email')
     .in('user_id', ownerIds);
+
+  let authUserMap = new Map<string, { user_metadata?: { phone?: string; full_name?: string } }>();
+  try {
+    const { data } = await adminClient.auth.admin.listUsers();
+    authUserMap = new Map((data?.users || []).map((u) => [u.id, u]));
+  } catch (authErr) {
+    console.warn('[admin/accounts] Failed to list auth users for phone enrichment:', authErr);
+  }
 
   const profiles = (rawProfiles || []) as ProfileRow[];
   const profileMap = new Map<string, ProfileRow>(
@@ -88,14 +96,17 @@ export async function GET(request: NextRequest) {
 
   const enriched = accounts.map((a) => {
     const p = profileMap.get(a.owner_user_id);
+    const u = authUserMap.get(a.owner_user_id);
+    const ownerPhone = (u?.user_metadata?.phone as string | undefined) || '';
     return {
       id: a.id,
       name: a.name,
       status: a.status || 'pending',
       created_at: a.created_at,
       activated_at: a.activated_at,
-      owner_name: p?.full_name || a.name,
+      owner_name: p?.full_name || (u?.user_metadata?.full_name as string | undefined) || a.name,
       owner_email: p?.email || '',
+      owner_phone: ownerPhone,
     };
   });
 

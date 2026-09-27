@@ -7,7 +7,11 @@ import { sanitizePhoneForMeta } from '@/lib/whatsapp/phone-utils';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { fullName, email } = body as { fullName?: string; email?: string };
+    const { fullName, email, phone } = body as {
+      fullName?: string;
+      email?: string;
+      phone?: string;
+    };
 
     if (!email) {
       return NextResponse.json({ error: 'Email required' }, { status: 400 });
@@ -27,6 +31,7 @@ export async function POST(request: NextRequest) {
       '🔔 *New Account Registration!*',
       `*Name:* ${fullName || 'Not provided'}`,
       `*Email:* ${email}`,
+      `*Phone:* ${phone || 'Not provided'}`,
       `*Time:* ${formattedTime}`,
       `*Status:* Pending Verification`,
       '',

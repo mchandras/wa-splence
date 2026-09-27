@@ -37,6 +37,7 @@ function SignupPageInner() {
   const inviteToken = searchParams.get("invite");
 
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -75,6 +76,7 @@ function SignupPageInner() {
       options: {
         data: {
           full_name: fullName,
+          phone: phone,
         },
         ...(emailRedirectTo ? { emailRedirectTo } : {}),
       },
@@ -93,7 +95,7 @@ function SignupPageInner() {
           fetch("/api/account/registration-alert", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fullName, email }),
+            body: JSON.stringify({ fullName, email, phone }),
             keepalive: true,
           }),
           new Promise((resolve) => setTimeout(resolve, 3500)),
@@ -213,6 +215,21 @@ function SignupPageInner() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
+                className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="phone" className="text-muted-foreground">
+                Contact number / WhatsApp
+              </Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="+91 98765 43210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 required
                 className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
               />

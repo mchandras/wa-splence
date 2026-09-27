@@ -7,6 +7,7 @@ import {
   CheckCircle,
   Clock,
   Loader2,
+  Phone,
   RefreshCw,
   Search,
   ShieldAlert,
@@ -27,6 +28,7 @@ interface AccountRecord {
   activated_at: string | null;
   owner_name: string;
   owner_email: string;
+  owner_phone?: string;
 }
 
 export function ApprovalsPanel() {
@@ -307,6 +309,21 @@ export function ApprovalsPanel() {
                       </div>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                         <span>{account.owner_email}</span>
+                        {account.owner_phone ? (
+                          <>
+                            <span>•</span>
+                            <a
+                              href={`https://wa.me/${account.owner_phone.replace(/\D/g, '')}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-emerald-500 hover:text-emerald-400 font-medium hover:underline"
+                              title="Message on WhatsApp"
+                            >
+                              <Phone className="h-3.5 w-3.5" />
+                              <span>{account.owner_phone}</span>
+                            </a>
+                          </>
+                        ) : null}
                         <span>•</span>
                         <span>
                           Registered:{' '}
