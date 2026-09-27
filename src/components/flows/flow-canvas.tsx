@@ -57,7 +57,7 @@ import {
   type OnNodeDrag,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Plus, Trash2 } from 'lucide-react';
+import { Maximize2, Minimize2, Plus, Trash2 } from 'lucide-react';
 
 import { useTranslations } from 'next-intl';
 
@@ -283,6 +283,8 @@ function FlowCanvasInner() {
     updateNodePositions,
     removeNode,
     flashKey,
+    isExpanded,
+    toggleExpand,
   } = useFlowEditor();
   const reactFlow = useReactFlow();
   const builderNodes = state.nodes;
@@ -570,7 +572,33 @@ function FlowCanvasInner() {
             className="!border-border !bg-card !rounded-xl !border !shadow-[0_6px_20px_-8px_rgba(0,0,0,0.5)]"
           />
           <Panel position="top-left" className="!top-4 !left-4">
-            <CanvasAddNodeButton t={t} />
+            <div className="flex items-center gap-2">
+              <CanvasAddNodeButton t={t} />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={toggleExpand}
+                className="h-9 gap-1.5 rounded-lg border-border bg-card/95 px-3 text-xs font-medium text-foreground shadow-md backdrop-blur-sm transition-all hover:bg-muted"
+                title={
+                  isExpanded
+                    ? 'Exit fullscreen (Esc)'
+                    : 'Expand canvas to fullscreen'
+                }
+              >
+                {isExpanded ? (
+                  <>
+                    <Minimize2 className="h-3.5 w-3.5 text-primary" />
+                    <span>{t('collapseCanvas')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="h-3.5 w-3.5 text-primary" />
+                    <span>{t('expandCanvas')}</span>
+                  </>
+                )}
+              </Button>
+            </div>
           </Panel>
         </ReactFlow>
       </div>
@@ -614,6 +642,7 @@ function NodeEditSheet({
   onSetEntry: () => void;
   t: ReturnType<typeof useTranslations>;
 }) {
+  const [sheetExpanded, setSheetExpanded] = useState(false);
   // Sheet is controlled — opens when a node is selected, closes via
   // Esc / overlay / close button (all delegated to onClose).
   const open = node !== null;
@@ -630,7 +659,10 @@ function NodeEditSheet({
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="right"
-        className="border-border bg-popover flex w-full flex-col gap-0 border-l p-0 sm:max-w-md"
+        className={cn(
+          'border-border bg-popover flex w-full flex-col gap-0 border-l p-0 transition-all duration-200',
+          sheetExpanded ? 'sm:max-w-2xl' : 'sm:max-w-md'
+        )}
       >
         <SheetHeader className="border-border flex-row items-center gap-3 space-y-0 border-b px-5 py-4">
           <NodeIconChip type={node.node_type} size={36} iconSize={18} />
@@ -647,9 +679,25 @@ function NodeEditSheet({
               {t(`nodes.${node.node_type}.blurb`)}
             </SheetDescription>
           </div>
-          <code className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px]">
-            {node.node_key}
-          </code>
+          <div className="flex items-center gap-1.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={() => setSheetExpanded((prev) => !prev)}
+              title={sheetExpanded ? 'Collapse panel' : 'Expand panel'}
+            >
+              {sheetExpanded ? (
+                <Minimize2 className="h-3.5 w-3.5" />
+              ) : (
+                <Maximize2 className="h-3.5 w-3.5" />
+              )}
+            </Button>
+            <code className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px]">
+              {node.node_key}
+            </code>
+          </div>
         </SheetHeader>
 
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">

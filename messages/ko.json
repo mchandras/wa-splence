@@ -1096,6 +1096,8 @@
       "deleteNode": "노드 삭제",
       "canvasView": "캔버스",
       "listView": "목록",
+      "expandCanvas": "화면 확대",
+      "collapseCanvas": "전체화면 종료",
       "noNodeSelected": "선택된 노드가 없습니다",
       "noNodeDesc": "캔버스에서 노드를 선택해 설정을 편집하세요.",
       "form": {
@@ -1208,7 +1210,9 @@
     "validation": {
       "noIssues": "문제가 없습니다. 활성화할 준비가 되었습니다.",
       "summary": "오류 {errorCount}건, 경고 {warningCount}건",
-      "jumpToNode": "{key} 노드로 이동"
+      "jumpToNode": "{key} 노드로 이동",
+      "showIssues": "상세 보기",
+      "hideIssues": "상세 접기"
     },
     "editorState": {
       "saved": "저장되었습니다.",

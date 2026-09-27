@@ -121,6 +121,10 @@ export interface FlowEditorContextValue {
    */
   flashKey: string | null;
   requestFlash: (key: string) => void;
+
+  /** Whether the flow editor is in expanded fullscreen mode */
+  isExpanded: boolean;
+  toggleExpand: () => void;
 }
 
 // ============================================================
@@ -291,6 +295,21 @@ export function FlowEditorProvider({
     },
     [],
   );
+
+  // Fullscreen / expanded screen mode
+  const [isExpanded, setIsExpanded] = useState(false);
+  const toggleExpand = useCallback(() => setIsExpanded((prev) => !prev), []);
+
+  useEffect(() => {
+    if (!isExpanded) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsExpanded(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isExpanded]);
 
   // Browser-level reload / tab-close / external-link guard. SPA
   // navigation (sidebar links, back button) isn't covered — Next 16
@@ -539,6 +558,8 @@ export function FlowEditorProvider({
       deleteFlow,
       flashKey,
       requestFlash,
+      isExpanded,
+      toggleExpand,
     }),
     [
       initialFlow,
@@ -560,6 +581,8 @@ export function FlowEditorProvider({
       deleteFlow,
       flashKey,
       requestFlash,
+      isExpanded,
+      toggleExpand,
     ],
   );
 

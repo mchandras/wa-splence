@@ -1096,6 +1096,8 @@
       "deleteNode": "Delete node",
       "canvasView": "Canvas",
       "listView": "List",
+      "expandCanvas": "Expand Screen",
+      "collapseCanvas": "Exit Fullscreen",
       "noNodeSelected": "No node selected",
       "noNodeDesc": "Select a node on the canvas to edit its configuration.",
       "form": {
@@ -1208,7 +1210,9 @@
     "validation": {
       "noIssues": "No issues. Ready to activate.",
       "summary": "{errorCount} {errorCount, plural, =1 {error} other {errors}}, {warningCount} {warningCount, plural, =1 {warning} other {warnings}}",
-      "jumpToNode": "Jump to node {key}"
+      "jumpToNode": "Jump to node {key}",
+      "showIssues": "Show details",
+      "hideIssues": "Hide details"
     },
     "editorState": {
       "saved": "Saved.",

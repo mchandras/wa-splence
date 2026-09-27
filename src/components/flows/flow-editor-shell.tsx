@@ -25,14 +25,15 @@
  */
 
 import { useEffect, useState } from "react";
-import { GitFork, List } from "lucide-react";
+import { GitFork, List, Maximize2, Minimize2 } from "lucide-react";
 
 import { FlowBuilder } from "./flow-builder";
 import { FlowCanvas } from "./flow-canvas";
-import { FlowEditorProvider } from "./flow-editor-state";
+import { FlowEditorProvider, useFlowEditor } from "./flow-editor-state";
 import { EditorHeader } from "./header";
 import { ValidationPanel } from "./validation-panel";
 import { NODE_META, nodeColors, type NodeType } from "./shared";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { FlowRow, FlowNodeRow } from "@/lib/flows/types";
 import { useTranslations } from "next-intl";
@@ -60,8 +61,6 @@ interface Props {
 }
 
 export function FlowEditorShell({ initialFlow, initialNodes }: Props) {
-  const t = useTranslations("Flows.builder");
-
   // Read the persisted choice in the useState initializer. Safe even
   // though this is a client component because the parent page only
   // mounts us AFTER a client-side fetch resolves — there's no SSR
@@ -95,67 +94,126 @@ export function FlowEditorShell({ initialFlow, initialNodes }: Props) {
 
   return (
     <FlowEditorProvider initialFlow={initialFlow} initialNodes={initialNodes}>
-      <div className="flex h-full min-h-0 flex-col">
-        <EditorHeader />
+      <FlowEditorShellInner
+        isMobile={isMobile}
+        effectiveView={effectiveView}
+        choose={choose}
+      />
+    </FlowEditorProvider>
+  );
+}
 
-        {/* ---- mode row: view toggle + node-type legend ----
-            Omitted entirely on mobile (canvas is unavailable there and
-            the legend is lg-only), so there's no empty band above the
-            stage on small screens. */}
-        {!isMobile && (
-          <div className="flex items-center gap-4 px-6 py-3.5">
-            <div
-              role="group"
-              aria-label="Editor view"
-              className="inline-flex gap-0.5 rounded-lg border border-border bg-muted p-0.5"
-            >
-              <SegButton
-                active={effectiveView === "canvas"}
-                onClick={() => choose("canvas")}
-                icon={<GitFork className="h-3.5 w-3.5" />}
-                label={t("canvasView")}
-              />
-              <SegButton
-                active={effectiveView === "list"}
-                onClick={() => choose("list")}
-                icon={<List className="h-3.5 w-3.5" />}
-                label={t("listView")}
-              />
-            </div>
-            <div className="ml-auto hidden flex-wrap items-center gap-x-3.5 gap-y-1.5 lg:flex">
-              {LEGEND_TYPES.map((t_type) => (
+function FlowEditorShellInner({
+  isMobile,
+  effectiveView,
+  choose,
+}: {
+  isMobile: boolean;
+  effectiveView: View;
+  choose: (next: View) => void;
+}) {
+  const t = useTranslations("Flows.builder");
+  const { isExpanded, toggleExpand } = useFlowEditor();
+
+  return (
+    <div
+      className={cn(
+        "flex min-h-0 flex-col transition-all duration-200",
+        isExpanded
+          ? "fixed inset-0 z-50 h-screen w-screen bg-background p-3 sm:p-5 overflow-hidden"
+          : "h-[calc(100vh-8.5rem)] min-h-[600px]",
+      )}
+    >
+      <EditorHeader />
+
+      {/* ---- mode row: view toggle + expand button + node-type legend ----
+          Omitted entirely on mobile (canvas is unavailable there and
+          the legend is lg-only), so there's no empty band above the
+          stage on small screens. */}
+      {!isMobile && (
+        <div className="flex items-center gap-3 px-6 py-2.5">
+          <div
+            role="group"
+            aria-label="Editor view"
+            className="inline-flex gap-0.5 rounded-lg border border-border bg-muted p-0.5"
+          >
+            <SegButton
+              active={effectiveView === "canvas"}
+              onClick={() => choose("canvas")}
+              icon={<GitFork className="h-3.5 w-3.5" />}
+              label={t("canvasView")}
+            />
+            <SegButton
+              active={effectiveView === "list"}
+              onClick={() => choose("list")}
+              icon={<List className="h-3.5 w-3.5" />}
+              label={t("listView")}
+            />
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={toggleExpand}
+            className="h-8 gap-1.5 rounded-lg border-border bg-card px-2.5 text-xs font-medium text-foreground shadow-sm transition-all hover:bg-muted"
+            title={
+              isExpanded
+                ? "Exit fullscreen (Esc)"
+                : "Expand canvas to fullscreen"
+            }
+          >
+            {isExpanded ? (
+              <>
+                <Minimize2 className="h-3.5 w-3.5 text-primary" />
+                <span>{t("collapseCanvas")}</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="h-3.5 w-3.5 text-primary" />
+                <span>{t("expandCanvas")}</span>
+              </>
+            )}
+          </Button>
+
+          <div className="ml-auto hidden flex-wrap items-center gap-x-3.5 gap-y-1.5 lg:flex">
+            {LEGEND_TYPES.map((t_type) => (
+              <span
+                key={t_type}
+                className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground"
+              >
                 <span
-                  key={t_type}
-                  className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground"
-                >
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ background: nodeColors(t_type).solid }}
-                  />
-                  {t(`nodes.${t_type}.label`)}
-                </span>
-              ))}
-            </div>
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ background: nodeColors(t_type).solid }}
+                />
+                {t(`nodes.${t_type}.label`)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ---- stage: the active view, owning its own overflow ---- */}
+      <div
+        className={cn(
+          "relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card-2",
+          isExpanded ? "mx-2 my-1" : "mx-6",
+        )}
+      >
+        {effectiveView === "canvas" ? (
+          <FlowCanvas />
+        ) : (
+          <div className="absolute inset-0 overflow-y-auto">
+            <FlowBuilder />
           </div>
         )}
-
-        {/* ---- stage: the active view, owning its own overflow ---- */}
-        <div className="relative mx-6 min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card-2">
-          {effectiveView === "canvas" ? (
-            <FlowCanvas />
-          ) : (
-            <div className="absolute inset-0 overflow-y-auto">
-              <FlowBuilder />
-            </div>
-          )}
-        </div>
-
-        {/* ---- validation / activate-readiness bar ---- */}
-        <div className="px-6 pb-5 pt-3">
-          <ValidationPanel />
-        </div>
       </div>
-    </FlowEditorProvider>
+
+      {/* ---- validation / activate-readiness bar ---- */}
+      <div className={cn("pb-4 pt-2.5 shrink-0", isExpanded ? "px-2" : "px-6")}>
+        <ValidationPanel />
+      </div>
+    </div>
   );
 }
 
