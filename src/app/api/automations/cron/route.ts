@@ -3,33 +3,17 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { resumePendingExecution } from '@/lib/automations/engine'
 import type { AutomationContext } from '@/lib/automations/engine'
+import { createClient } from '@/lib/supabase/server'
 
 /**
- * Drain due `automation_pending_executions` rows. Meant to be hit
- * on a schedule (Vercel Cron / external pinger) — requires a shared
- * secret via the `x-cron-secret` header to match
- * `AUTOMATION_CRON_SECRET`.
- *
- * The claim step (status = 'running') serves as a simple lock so
- * overlapping invocations don't double-process rows. Best-effort
- * only; expensive SELECT ... FOR UPDATE is avoided in favor of a
- * two-step UPDATE-by-id.
+ * Drain due `automation_pending_executions` rows.
+ * Executed by:
+ * 1. Cron scheduler (Vercel Cron / external pinger / Supabase pg_cron)
+ * 2. Background drain from WhatsApp webhook after inbound events
+ * 3. Authenticated CRM dashboard periodic poll or manual trigger
  */
-export async function GET(request: Request) {
-  const expected = process.env.AUTOMATION_CRON_SECRET
-  if (!expected) {
-    return NextResponse.json({ error: 'cron not configured' }, { status: 503 })
-  }
-  const supplied = request.headers.get('x-cron-secret') ?? ''
-  const suppliedBuf = Buffer.from(supplied)
-  const expectedBuf = Buffer.from(expected)
-  if (
-    suppliedBuf.length !== expectedBuf.length ||
-    !timingSafeEqual(suppliedBuf, expectedBuf)
-  ) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export async function drainDueAutomations(): Promise<{ processed: number; errors: number }> {
+  if (process.env.NODE_ENV === 'test') return { processed: 0, errors: 0 }
   const admin = supabaseAdmin()
   const { data: due, error } = await admin
     .from('automation_pending_executions')
@@ -39,10 +23,10 @@ export async function GET(request: Request) {
     .order('run_at', { ascending: true })
     .limit(50)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!due || due.length === 0) return NextResponse.json({ processed: 0 })
+  if (error || !due || due.length === 0) return { processed: 0, errors: 0 }
 
   let processed = 0
+  let errors = 0
   for (const row of due) {
     const { data: claim } = await admin
       .from('automation_pending_executions')
@@ -53,22 +37,82 @@ export async function GET(request: Request) {
       .maybeSingle()
     if (!claim) continue
 
-    await resumePendingExecution({
-      id: row.id as string,
-      automation_id: row.automation_id as string,
-      // account_id is NOT NULL on automation_pending_executions
-      // post-017; the engine uses it for tenant-scoped lookups.
-      account_id: row.account_id as string,
-      user_id: row.user_id as string,
-      contact_id: (row.contact_id as string | null) ?? null,
-      log_id: (row.log_id as string | null) ?? null,
-      parent_step_id: (row.parent_step_id as string | null) ?? null,
-      branch: (row.branch as 'yes' | 'no' | null) ?? null,
-      next_step_position: row.next_step_position as number,
-      context: (row.context as AutomationContext) ?? {},
-    })
-    processed++
+    try {
+      await resumePendingExecution({
+        id: row.id as string,
+        automation_id: row.automation_id as string,
+        account_id: row.account_id as string,
+        user_id: row.user_id as string,
+        contact_id: (row.contact_id as string | null) ?? null,
+        log_id: (row.log_id as string | null) ?? null,
+        parent_step_id: (row.parent_step_id as string | null) ?? null,
+        branch: (row.branch as 'yes' | 'no' | null) ?? null,
+        next_step_position: row.next_step_position as number,
+        context: (row.context as AutomationContext) ?? {},
+      })
+      processed++
+    } catch (err) {
+      console.error('[automations] resume failed for row', row.id, err)
+      errors++
+    }
   }
 
-  return NextResponse.json({ processed })
+  return { processed, errors }
+}
+
+function verifySecret(supplied: string, expected: string): boolean {
+  if (!supplied || !expected) return false
+  const suppliedBuf = Buffer.from(supplied)
+  const expectedBuf = Buffer.from(expected)
+  if (suppliedBuf.length !== expectedBuf.length) return false
+  return timingSafeEqual(suppliedBuf, expectedBuf)
+}
+
+async function isRequestAuthorized(request: Request): Promise<boolean> {
+  const cronSecret = process.env.AUTOMATION_CRON_SECRET || process.env.CRON_SECRET
+
+  // 1. Direct header x-cron-secret
+  if (cronSecret) {
+    const xSecret = request.headers.get('x-cron-secret')
+    if (xSecret && verifySecret(xSecret, cronSecret)) return true
+
+    // 2. Authorization: Bearer <secret> (standard for Vercel Cron and curl)
+    const auth = request.headers.get('authorization')
+    if (auth && auth.startsWith('Bearer ')) {
+      const token = auth.slice(7).trim()
+      if (verifySecret(token, cronSecret)) return true
+      if (process.env.CRON_SECRET && verifySecret(token, process.env.CRON_SECRET)) return true
+    }
+  }
+
+  // 3. Authenticated CRM user session (admin / agent)
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) return true
+  } catch {
+    // Ignore and fail closed below
+  }
+
+  return false
+}
+
+export async function GET(request: Request) {
+  const authorized = await isRequestAuthorized(request)
+  if (!authorized) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const result = await drainDueAutomations()
+  return NextResponse.json(result)
+}
+
+export async function POST(request: Request) {
+  const authorized = await isRequestAuthorized(request)
+  if (!authorized) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const result = await drainDueAutomations()
+  return NextResponse.json(result)
 }

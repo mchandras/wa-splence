@@ -15,6 +15,7 @@ import {
   handleTemplateWebhookChange,
   isTemplateWebhookField,
 } from '@/lib/whatsapp/template-webhook'
+import { drainDueAutomations } from '@/app/api/automations/cron/route'
 
 // The `after()` callback in POST runs within this route's max duration.
 // Inbound processing can fan out to per-media Meta verification calls, so
@@ -218,6 +219,10 @@ export async function POST(request: Request) {
   after(async () => {
     try {
       await processWebhook(body)
+      // Opportunistically drain any due parked automation wait steps
+      await drainDueAutomations().catch((err) =>
+        console.warn('[webhook] drainDueAutomations error:', err)
+      )
     } catch (error) {
       console.error('Error processing webhook:', error)
     }
