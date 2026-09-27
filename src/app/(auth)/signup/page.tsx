@@ -86,20 +86,22 @@ function SignupPageInner() {
       return;
     }
 
-    // Fire-and-forget notification to the tool owner
-    try {
-      void fetch("/api/account/registration-alert", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, email }),
-      });
-    } catch {
-      // Non-blocking: alert failure shouldn't prevent signup screen
-    }
-
-    // Since this is a new self-registration requiring offline payment verification,
-    // clear any session Supabase automatically established in the browser cookies.
+    // Dispatch notification to the tool owner before clearing session
     if (!inviteToken) {
+      try {
+        await Promise.race([
+          fetch("/api/account/registration-alert", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fullName, email }),
+            keepalive: true,
+          }),
+          new Promise((resolve) => setTimeout(resolve, 3500)),
+        ]);
+      } catch (alertErr) {
+        console.warn("[signup] Registration alert dispatch error:", alertErr);
+      }
+
       await supabase.auth.signOut();
     }
 
