@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { MessageSquare, CheckCircle, ArrowLeft } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import { useBrand } from "@/lib/branding/brand-context";
 import { BrandLogo } from "@/components/branding/brand-logo";
 
@@ -86,7 +85,7 @@ export default function ForgotPasswordPage() {
           </div>
           <CardTitle className="text-xl text-foreground">Reset password</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Enter your email and we&apos;ll send you a reset link
+            Enter your email and we&apos;ll send you a password reset link for {brand.name}
           </CardDescription>
         </CardHeader>
         <CardContent>

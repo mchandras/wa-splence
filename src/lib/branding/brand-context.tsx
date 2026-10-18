@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useState } from "react";
 import { DEFAULT_BRAND, getBrandByHost, isDefaultBrand, type BrandConfig } from "./config";
 
 interface BrandContextType {
@@ -20,18 +20,13 @@ export function BrandProvider({
   initialBrand?: BrandConfig;
   children: React.ReactNode;
 }) {
-  const [brand, setBrand] = useState<BrandConfig>(initialBrand || DEFAULT_BRAND);
-
-  useEffect(() => {
+  const [brand] = useState<BrandConfig>(() => {
+    if (initialBrand) return initialBrand;
     if (typeof window !== "undefined") {
-      const currentHost = window.location.hostname;
-      const resolved = getBrandByHost(currentHost);
-      // Update if host maps to a distinct brand from what was initially rendered
-      if (resolved.id !== brand.id) {
-        setBrand(resolved);
-      }
+      return getBrandByHost(window.location.hostname);
     }
-  }, [brand.id]);
+    return DEFAULT_BRAND;
+  });
 
   return (
     <BrandContext.Provider

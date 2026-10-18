@@ -17,6 +17,7 @@ describe('super-admin helper', () => {
     expect(isSuperAdminEmail('MANOJCDIGITAL@GMAIL.COM')).toBe(true);
     expect(isSuperAdminEmail('manojkchandar@gmail.com')).toBe(true);
     expect(isSuperAdminEmail('  manojkchandar@gmail.com  ')).toBe(true);
+    expect(getSuperAdminEmails()).toContain('manojcdigital@gmail.com');
   });
 
   it('rejects regular client emails', () => {
