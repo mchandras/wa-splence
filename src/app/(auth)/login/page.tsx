@@ -17,6 +17,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { MessageSquare, UsersRound } from "lucide-react";
+import { useBrand } from "@/lib/branding/brand-context";
+import { BrandLogo } from "@/components/branding/brand-logo";
 
 // `useSearchParams` opts the component out of static prerendering
 // unless it sits under a Suspense boundary. We split the form into
@@ -38,6 +40,7 @@ function LoginPageInner() {
   // page to accept rather than to /dashboard.
   const inviteToken = searchParams.get("invite");
   const t = useTranslations("LoginPage");
+  const { brand, isDefault } = useBrand();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -117,18 +120,13 @@ function LoginPageInner() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md border-border bg-card">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50 p-2">
+          <div className="mb-2 flex items-center justify-center">
             {inviteToken ? (
-              <UsersRound className="h-7 w-7 text-primary" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50 p-2">
+                <UsersRound className="h-7 w-7 text-primary" />
+              </div>
             ) : (
-              <Image
-                src="/logo.png"
-                alt="Waplence by Splence"
-                width={56}
-                height={56}
-                className="h-full w-full object-contain"
-                priority
-              />
+              <BrandLogo size="lg" priority />
             )}
           </div>
           <CardTitle className="text-xl text-foreground">
@@ -137,7 +135,7 @@ function LoginPageInner() {
           <CardDescription className="text-muted-foreground">
             {inviteToken
               ? t('descAccept')
-              : t('descWelcome')}
+              : (isDefault ? t('descWelcome') : `Sign in to continue to ${brand.name}`)}
           </CardDescription>
         </CardHeader>
         <CardContent>

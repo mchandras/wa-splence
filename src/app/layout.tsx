@@ -20,26 +20,46 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "Waplence by Splence",
-    template: "%s — Waplence",
-  },
-  description: "Waplence by Splence — WhatsApp CRM and Marketing Platform.",
-  robots: {
-    index: false,
-    follow: false,
-  },
-  icons: {
-    icon: [{ url: "/logo.png" }],
-    apple: [{ url: "/logo.png" }],
-  },
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-};
+import { headers } from "next/headers";
+import { getBrandByHost } from "@/lib/branding/config";
+import { BrandProvider } from "@/lib/branding/brand-context";
+
+export async function generateMetadata(): Promise<Metadata> {
+  let host = "wa.splence.in";
+  try {
+    const headersList = await headers();
+    host =
+      headersList.get("x-forwarded-host") ||
+      headersList.get("host") ||
+      "wa.splence.in";
+  } catch {
+    // Prerender or build fallback
+  }
+
+  const brand = getBrandByHost(host);
+  const iconUrl = brand.faviconUrl || brand.logoUrl || "/logo.png";
+
+  return {
+    title: {
+      default: brand.name,
+      template: `%s — ${brand.shortName}`,
+    },
+    description: brand.description,
+    robots: {
+      index: false,
+      follow: false,
+    },
+    icons: {
+      icon: [{ url: iconUrl }],
+      apple: [{ url: iconUrl }],
+    },
+    formatDetection: {
+      email: false,
+      address: false,
+      telephone: false,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#020617",
@@ -86,6 +106,18 @@ export default async function RootLayout({
   const locale = await getLocale();
   const messages = await getMessages();
 
+  let host = "wa.splence.in";
+  try {
+    const headersList = await headers();
+    host =
+      headersList.get("x-forwarded-host") ||
+      headersList.get("host") ||
+      "wa.splence.in";
+  } catch {
+    // Prerender or build fallback
+  }
+  const brand = getBrandByHost(host);
+
   return (
     <html
       lang={locale}
@@ -110,10 +142,12 @@ export default async function RootLayout({
       </head>
       <body className="min-h-full bg-background text-foreground font-sans">
         <NextIntlClientProvider messages={messages} locale={locale}>
-          <ThemeProvider>
-            {children}
-            <ThemedToaster />
-          </ThemeProvider>
+          <BrandProvider initialBrand={brand}>
+            <ThemeProvider>
+              {children}
+              <ThemedToaster />
+            </ThemeProvider>
+          </BrandProvider>
         </NextIntlClientProvider>
       </body>
     </html>

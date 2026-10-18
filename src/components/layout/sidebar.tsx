@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useBrand } from "@/lib/branding/brand-context";
+import { BrandLogo } from "@/components/branding/brand-logo";
 import { useTotalUnread } from "@/hooks/use-total-unread";
 import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
 import {
@@ -119,6 +121,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations("Sidebar");
   const pathname = usePathname();
   const { user, profile, profileLoading, account, accountRole, signOut } = useAuth();
+  const { brand, isDefault } = useBrand();
   const isSuperAdmin = isSuperAdminEmail(user?.email || profile?.email);
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
@@ -190,19 +193,10 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         {/* Logo row. On mobile we put a close button here; on desktop the
             close button is hidden since the sidebar is always-visible. */}
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border px-4">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
-              <Image
-                src="/logo.png"
-                alt="Waplence by Splence"
-                width={32}
-                height={32}
-                className="h-full w-full object-contain"
-                priority
-              />
-            </div>
-            <span className="text-sm font-semibold tracking-tight text-foreground">
-              {t("title")}
+          <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
+            <BrandLogo size="sm" priority />
+            <span className="text-sm font-semibold tracking-tight text-foreground truncate">
+              {isDefault ? t("title") : brand.name}
             </span>
           </Link>
           <button

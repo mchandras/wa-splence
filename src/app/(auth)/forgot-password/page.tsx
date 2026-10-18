@@ -15,8 +15,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { MessageSquare, CheckCircle, ArrowLeft } from "lucide-react";
+import { useBrand } from "@/lib/branding/brand-context";
+import { BrandLogo } from "@/components/branding/brand-logo";
 
 export default function ForgotPasswordPage() {
+  const { brand } = useBrand();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -78,15 +81,8 @@ export default function ForgotPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md border-border bg-card">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50 p-2">
-            <Image
-              src="/logo.png"
-              alt="Waplence by Splence"
-              width={56}
-              height={56}
-              className="h-full w-full object-contain"
-              priority
-            />
+          <div className="mb-2 flex items-center justify-center">
+            <BrandLogo size="lg" priority />
           </div>
           <CardTitle className="text-xl text-foreground">Reset password</CardTitle>
           <CardDescription className="text-muted-foreground">

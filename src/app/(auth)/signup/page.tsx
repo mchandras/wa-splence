@@ -16,6 +16,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { MessageSquare, CheckCircle, UsersRound } from "lucide-react";
+import { useBrand } from "@/lib/branding/brand-context";
+import { BrandLogo } from "@/components/branding/brand-logo";
 
 // `useSearchParams` opts the component out of static prerendering
 // unless wrapped in Suspense — same pattern as /login.
@@ -35,6 +37,7 @@ function SignupPageInner() {
   // points back at /join/<token> so the user lands on the redeem
   // step after verifying instead of being dropped on /dashboard.
   const inviteToken = searchParams.get("invite");
+  const { brand, isDefault } = useBrand();
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -68,7 +71,7 @@ function SignupPageInner() {
     // redirect (the app root).
     const emailRedirectTo = inviteToken
       ? `${window.location.origin}/join/${encodeURIComponent(inviteToken)}`
-      : undefined;
+      : `${window.location.origin}/dashboard`;
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -159,18 +162,13 @@ function SignupPageInner() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md border-border bg-card">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50 p-2">
+          <div className="mb-2 flex items-center justify-center">
             {inviteToken ? (
-              <UsersRound className="h-7 w-7 text-primary" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50 p-2">
+                <UsersRound className="h-7 w-7 text-primary" />
+              </div>
             ) : (
-              <Image
-                src="/logo.png"
-                alt="Waplence by Splence"
-                width={56}
-                height={56}
-                className="h-full w-full object-contain"
-                priority
-              />
+              <BrandLogo size="lg" priority />
             )}
           </div>
           <CardTitle className="text-xl text-foreground">
@@ -179,7 +177,7 @@ function SignupPageInner() {
           <CardDescription className="text-muted-foreground">
             {inviteToken
               ? "Verify your email, then accept the invitation to join your team."
-              : "Get started with Waplence by Splence"}
+              : (isDefault ? "Get started with Waplence by Splence" : `Get started with ${brand.name}`)}
           </CardDescription>
         </CardHeader>
         <CardContent>
