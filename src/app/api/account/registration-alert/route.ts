@@ -92,10 +92,9 @@ export async function POST(request: NextRequest) {
           templateName: 'account_registration_alert',
           language: 'en_US',
           params: [
-            fullName || 'Not provided',
+            phone ? `${fullName || 'New User'} (${phone})` : (fullName || 'New User'),
             email,
-            phone || 'Not provided',
-            originDomain,
+            `${formattedTime} via ${originDomain}`,
           ],
         });
         messageId = tRes.messageId;
