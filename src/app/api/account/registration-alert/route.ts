@@ -21,6 +21,11 @@ export async function POST(request: NextRequest) {
       process.env.ADMIN_ALERT_PHONE_NUMBER || '+918123322871'
     );
 
+    const originDomain =
+      request.headers.get('x-forwarded-host') ||
+      request.headers.get('host') ||
+      'wa.splence.in';
+
     const formattedTime = new Date().toLocaleString('en-IN', {
       timeZone: 'Asia/Kolkata',
       dateStyle: 'medium',
@@ -29,6 +34,7 @@ export async function POST(request: NextRequest) {
 
     const messageText = [
       '🔔 *New Account Registration!*',
+      `*Platform:* ${originDomain}`,
       `*Name:* ${fullName || 'Not provided'}`,
       `*Email:* ${email}`,
       `*Phone:* ${phone || 'Not provided'}`,
@@ -85,7 +91,12 @@ export async function POST(request: NextRequest) {
           to: targetPhone,
           templateName: 'account_registration_alert',
           language: 'en_US',
-          params: [fullName || 'New User', email, formattedTime],
+          params: [
+            fullName || 'Not provided',
+            email,
+            phone || 'Not provided',
+            originDomain,
+          ],
         });
         messageId = tRes.messageId;
         console.log(`[registration-alert] WhatsApp template sent to ${targetPhone} (wamid: ${messageId})`);
