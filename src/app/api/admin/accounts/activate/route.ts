@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/flows/admin-client';
 import { NextResponse, type NextRequest } from 'next/server';
+import { isSuperAdminEmail } from '@/lib/auth/super-admin';
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
@@ -24,17 +25,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data: callerProfile } = await supabase
-    .from('profiles')
-    .select('account_role')
-    .eq('user_id', user.id)
-    .single();
-
-  if (
-    callerProfile?.account_role !== 'owner' &&
-    callerProfile?.account_role !== 'admin'
-  ) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  // Only Platform Super Admins can activate or suspend accounts
+  if (!isSuperAdminEmail(user.email)) {
+    return NextResponse.json(
+      { error: 'Forbidden: Super Admin only' },
+      { status: 403 }
+    );
   }
 
   const body = await request.json().catch(() => ({}));

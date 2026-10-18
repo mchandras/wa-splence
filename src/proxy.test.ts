@@ -99,7 +99,7 @@ describe("proxy — refreshed auth cookies survive redirects", () => {
   });
 
   it("passes through (no redirect) for a signed-in user on a protected page", async () => {
-    mockUser = { id: "user-1" };
+    mockUser = { id: "user-1", email: "client@example.com" } as unknown as { id: string };
     refreshedCookies = [ROTATED];
 
     const res = await proxy(
@@ -109,5 +109,28 @@ describe("proxy — refreshed auth cookies survive redirects", () => {
     // No redirect — the normal NextResponse.next() already carries cookies.
     expect(res.headers.get("location")).toBeNull();
     expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
+  });
+
+  it("redirects non-super-admin signed-in user away from /admin to /dashboard", async () => {
+    mockUser = { id: "user-client", email: "regular-client@example.com" } as unknown as { id: string };
+    refreshedCookies = [ROTATED];
+
+    const res = await proxy(
+      new NextRequest("https://app.test/admin"),
+    );
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/dashboard");
+  });
+
+  it("allows super-admin to access /admin without redirect", async () => {
+    mockUser = { id: "user-admin", email: "manojkchandar@gmail.com" } as unknown as { id: string };
+    refreshedCookies = [ROTATED];
+
+    const res = await proxy(
+      new NextRequest("https://app.test/admin"),
+    );
+
+    expect(res.headers.get("location")).toBeNull();
   });
 });

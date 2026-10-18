@@ -113,11 +113,13 @@ interface SidebarProps {
 }
 
 import { useTranslations } from "next-intl";
+import { isSuperAdminEmail } from "@/lib/auth/super-admin";
 
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations("Sidebar");
   const pathname = usePathname();
-  const { profile, profileLoading, account, accountRole, signOut } = useAuth();
+  const { user, profile, profileLoading, account, accountRole, signOut } = useAuth();
+  const isSuperAdmin = isSuperAdminEmail(user?.email || profile?.email);
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
   // Only surface the account-name strip when it actually carries
@@ -279,7 +281,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           <div className="my-4 border-t border-border" />
 
           <ul className="flex flex-col gap-1">
-            {accountRole && (accountRole === "owner" || accountRole === "admin") && (
+            {isSuperAdmin && (
               <li>
                 <Link
                   href="/admin"

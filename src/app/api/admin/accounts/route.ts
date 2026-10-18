@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/flows/admin-client';
 import { NextResponse, type NextRequest } from 'next/server';
+import { isSuperAdminEmail } from '@/lib/auth/super-admin';
 
 interface AccountRow {
   id: string;
@@ -39,18 +40,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Caller must be an owner or admin of their account
-  const { data: callerProfile } = await supabase
-    .from('profiles')
-    .select('account_role')
-    .eq('user_id', user.id)
-    .single();
-
-  if (
-    callerProfile?.account_role !== 'owner' &&
-    callerProfile?.account_role !== 'admin'
-  ) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  // Only Platform Super Admins can access the global accounts management panel
+  if (!isSuperAdminEmail(user.email)) {
+    return NextResponse.json(
+      { error: 'Forbidden: Super Admin only' },
+      { status: 403 }
+    );
   }
 
   const adminClient = supabaseAdmin();

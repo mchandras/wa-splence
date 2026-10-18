@@ -1,9 +1,26 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
+import { isSuperAdminEmail } from '@/lib/auth/super-admin';
 import { ApprovalsPanel } from '@/components/settings/approvals-panel';
 
 export default function AdminPage() {
+  const router = useRouter();
+  const { user, profile, profileLoading } = useAuth();
+  const isSuperAdmin = isSuperAdminEmail(user?.email || profile?.email);
+
+  useEffect(() => {
+    if (!profileLoading && !isSuperAdmin) {
+      router.replace('/dashboard');
+    }
+  }, [profileLoading, isSuperAdmin, router]);
+
+  if (profileLoading || !isSuperAdmin) {
+    return null;
+  }
+
   return (
     <Suspense fallback={null}>
       <div className="space-y-6">

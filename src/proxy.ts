@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isSuperAdminEmail } from '@/lib/auth/super-admin'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -75,6 +76,15 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return withRefreshedCookies(NextResponse.redirect(url))
+  }
+
+  // Admin routes - redirect non-super-admins to dashboard
+  if (user && request.nextUrl.pathname.startsWith('/admin')) {
+    if (!isSuperAdminEmail(user.email)) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return withRefreshedCookies(NextResponse.redirect(url))
+    }
   }
 
   // API routes that need auth (not webhooks)
