@@ -1,11 +1,12 @@
 'use client';
 
-import { Suspense, useMemo, type ReactNode } from 'react';
+import { Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
+import { isSuperAdminEmail } from '@/lib/auth/super-admin';
 import { SettingsRail } from '@/components/settings/settings-rail';
 import { SettingsOverview } from '@/components/settings/settings-overview';
 import { ProfileForm } from '@/components/settings/profile-form';
@@ -43,15 +44,24 @@ export default function SettingsPage() {
 function SettingsPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { defaultCurrency } = useAuth();
+  const { defaultCurrency, user, profile, profileLoading } = useAuth();
   const { mode } = useTheme();
   const t = useTranslations('Settings');
+  const isSuperAdmin = isSuperAdminEmail(user?.email || profile?.email);
 
   // The URL (`?tab=`) is the single source of truth for the active
   // section — deep-linkable, and it keeps the existing links in the
   // app sidebar/header working. Legacy tab values (tags, custom-fields)
   // resolve onto their new home; unknown/empty → the Overview landing.
   const section = resolveSection(searchParams.get('tab'));
+
+  useEffect(() => {
+    if (!profileLoading && section === 'approvals' && !isSuperAdmin) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('tab', 'overview');
+      router.replace(`/settings?${params.toString()}`, { scroll: false });
+    }
+  }, [section, isSuperAdmin, profileLoading, router, searchParams]);
 
   const go = (next: SettingsSection) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -82,7 +92,7 @@ function SettingsPageInner() {
     deals: <DealsSettings />,
     members: <MembersTab />,
     api: <ApiKeysSettings />,
-    approvals: <ApprovalsPanel />,
+    approvals: isSuperAdmin ? <ApprovalsPanel /> : null,
   };
 
   return (

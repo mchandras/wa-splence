@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { CheckCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle } from "lucide-react";
 import { useBrand } from "@/lib/branding/brand-context";
 import { BrandLogo } from "@/components/branding/brand-logo";
 

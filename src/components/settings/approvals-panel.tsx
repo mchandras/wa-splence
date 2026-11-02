@@ -19,6 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { useAuth } from '@/hooks/use-auth';
+import { isSuperAdminEmail } from '@/lib/auth/super-admin';
 
 interface AccountRecord {
   id: string;
@@ -32,6 +34,9 @@ interface AccountRecord {
 }
 
 export function ApprovalsPanel() {
+  const { user, profile, profileLoading } = useAuth();
+  const isSuperAdmin = isSuperAdminEmail(user?.email || profile?.email);
+
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
@@ -39,6 +44,7 @@ export function ApprovalsPanel() {
   const [filter, setFilter] = useState<'pending' | 'all' | 'active'>('pending');
 
   const fetchAccounts = useCallback(async () => {
+    if (!isSuperAdmin) return;
     setLoading(true);
     try {
       const res = await fetch('/api/admin/accounts');
@@ -53,11 +59,13 @@ export function ApprovalsPanel() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isSuperAdmin]);
 
   useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts]);
+    if (isSuperAdmin) {
+      fetchAccounts();
+    }
+  }, [isSuperAdmin, fetchAccounts]);
 
   const handleUpdateStatus = async (
     accountId: string,
@@ -126,6 +134,10 @@ export function ApprovalsPanel() {
       return matchesFilter && matchesSearch;
     });
   }, [accounts, filter, search]);
+
+  if (profileLoading || !isSuperAdmin) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">
