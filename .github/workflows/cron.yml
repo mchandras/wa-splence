@@ -9,18 +9,22 @@ on:
 jobs:
   cron:
     runs-on: ubuntu-latest
-    if: ${{ secrets.APP_URL != '' && secrets.AUTOMATION_CRON_SECRET != '' }}
     steps:
       - name: Ping cron endpoints
         env:
           APP_URL: ${{ secrets.APP_URL }}
           CRON_SECRET: ${{ secrets.AUTOMATION_CRON_SECRET }}
         run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "Secrets APP_URL or AUTOMATION_CRON_SECRET are not set. Skipping."
+            exit 0
+          fi
+
           BASE_URL="${APP_URL%/}"
-          echo "Triggering automations cron..."
+          echo "Triggering automations cron at ${BASE_URL}/api/automations/cron..."
           curl -s -f -X GET "${BASE_URL}/api/automations/cron" \
             -H "x-cron-secret: ${CRON_SECRET}" || echo "Automations cron returned non-200"
 
-          echo "Triggering flows cron..."
+          echo "Triggering flows cron at ${BASE_URL}/api/flows/cron..."
           curl -s -f -X GET "${BASE_URL}/api/flows/cron" \
             -H "x-cron-secret: ${CRON_SECRET}" || echo "Flows cron returned non-200"
