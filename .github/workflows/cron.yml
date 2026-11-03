@@ -1,0 +1,26 @@
+name: CRM Scheduled Crons
+
+on:
+  schedule:
+    # Run every 5 minutes (minimum allowed interval on GitHub Actions)
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  cron:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.APP_URL != '' && secrets.AUTOMATION_CRON_SECRET != '' }}
+    steps:
+      - name: Ping cron endpoints
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.AUTOMATION_CRON_SECRET }}
+        run: |
+          BASE_URL="${APP_URL%/}"
+          echo "Triggering automations cron..."
+          curl -s -f -X GET "${BASE_URL}/api/automations/cron" \
+            -H "x-cron-secret: ${CRON_SECRET}" || echo "Automations cron returned non-200"
+
+          echo "Triggering flows cron..."
+          curl -s -f -X GET "${BASE_URL}/api/flows/cron" \
+            -H "x-cron-secret: ${CRON_SECRET}" || echo "Flows cron returned non-200"
