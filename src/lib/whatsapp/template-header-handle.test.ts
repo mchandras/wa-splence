@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // Stub the Meta resumable upload so the helper is tested in isolation.
 vi.mock('./meta-api', () => ({
   uploadResumableMedia: vi.fn(async () => ({ handle: 'HANDLE123' })),
+  getSubscribedApps: vi.fn(async () => []),
 }));
 
 // The SSRF guard does a real DNS lookup, so stub it — the fixtures below use
@@ -12,7 +13,7 @@ vi.mock('@/lib/webhooks/ssrf', () => ({
 }));
 
 import { ensureImageHeaderHandle } from './template-header-handle';
-import { uploadResumableMedia } from './meta-api';
+import { uploadResumableMedia, getSubscribedApps } from './meta-api';
 import { isDeliverableUrl } from '@/lib/webhooks/ssrf';
 import type { TemplatePayload } from './template-validators';
 
@@ -73,6 +74,19 @@ describe('ensureImageHeaderHandle', () => {
     const p = payload();
     await ensureImageHeaderHandle(p, 'tok');
     expect(uploadResumableMedia).toHaveBeenCalledOnce();
+    expect(p.header_handle).toBe('HANDLE123');
+  });
+
+  it('dynamically resolves App ID from getSubscribedApps when wabaId is provided', async () => {
+    vi.mocked(getSubscribedApps).mockResolvedValueOnce([
+      { whatsapp_business_api_data: { id: 'dynamic-app-999', name: 'Client App' } },
+    ]);
+    vi.stubGlobal('fetch', vi.fn(async () => imgResponse('image/jpeg', 2048)));
+    const p = payload();
+    await ensureImageHeaderHandle(p, 'tok', 'waba-123');
+    expect(uploadResumableMedia).toHaveBeenCalledWith(
+      expect.objectContaining({ appId: 'dynamic-app-999' }),
+    );
     expect(p.header_handle).toBe('HANDLE123');
   });
 

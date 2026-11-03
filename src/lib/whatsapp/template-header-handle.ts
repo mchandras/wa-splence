@@ -1,4 +1,4 @@
-import { uploadResumableMedia } from '@/lib/whatsapp/meta-api'
+import { getSubscribedApps, uploadResumableMedia } from '@/lib/whatsapp/meta-api'
 import type { TemplatePayload } from '@/lib/whatsapp/template-validators'
 import { isDeliverableUrl } from '@/lib/webhooks/ssrf'
 
@@ -9,6 +9,11 @@ import { isDeliverableUrl } from '@/lib/webhooks/ssrf'
  * `header_media_url` (whether the user uploaded a file or pasted a link)
  * into a handle and writes it onto the payload, so both the upload path
  * and the legacy URL path actually succeed.
+ *
+ * In multi-tenant environments, different WABAs may be subscribed to
+ * different Meta Apps. When `wabaId` is supplied, we dynamically look up
+ * the subscribed App ID from Meta so uploads succeed under the client's
+ * actual Meta App rather than failing on a global mismatched META_APP_ID.
  *
  * No-op unless the header is an image that has a URL but no handle yet.
  * Image-only for now (the #230 scope); video/document handles can follow
@@ -22,12 +27,29 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png']
 export async function ensureImageHeaderHandle(
   payload: TemplatePayload,
   accessToken: string,
+  wabaId?: string,
 ): Promise<void> {
   if (payload.header_type !== 'image') return
   if (payload.header_handle) return // already have one
   if (!payload.header_media_url) return // validator already requires url-or-handle
 
-  const appId = process.env.META_APP_ID
+  let appId = process.env.META_APP_ID
+
+  if (wabaId) {
+    try {
+      const apps = await getSubscribedApps({ wabaId, accessToken })
+      const subscribedAppId = apps?.[0]?.whatsapp_business_api_data?.id
+      if (subscribedAppId) {
+        appId = subscribedAppId
+      }
+    } catch (e) {
+      console.warn(
+        '[template-header] dynamic getSubscribedApps lookup failed, falling back to META_APP_ID:',
+        e,
+      )
+    }
+  }
+
   if (!appId) {
     throw new Error(
       'Image-header templates need META_APP_ID set (used for Meta’s Resumable Upload). Add it to your environment, or remove the image header.',

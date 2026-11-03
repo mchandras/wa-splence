@@ -49,6 +49,34 @@ describe("verifyMetaWebhookSignature", () => {
     expect(verifyMetaWebhookSignature("{}", "sha256=tooshort")).toBe(false);
   });
 
+  describe("multi-secret support", () => {
+    const originalSecret = process.env.META_APP_SECRET;
+    const SECRET_A = "secret_app_a_12345678901234567890";
+    const SECRET_B = "secret_app_b_09876543210987654321";
+
+    beforeEach(() => {
+      process.env.META_APP_SECRET = `${SECRET_A}, ${SECRET_B}`;
+    });
+    afterEach(() => {
+      process.env.META_APP_SECRET = originalSecret;
+    });
+
+    it("accepts a request signed with the first secret", () => {
+      const body = JSON.stringify({ event: "from_app_a" });
+      expect(verifyMetaWebhookSignature(body, signedHeader(body, SECRET_A))).toBe(true);
+    });
+
+    it("accepts a request signed with the second secret", () => {
+      const body = JSON.stringify({ event: "from_app_b" });
+      expect(verifyMetaWebhookSignature(body, signedHeader(body, SECRET_B))).toBe(true);
+    });
+
+    it("rejects a request signed with an unknown secret", () => {
+      const body = JSON.stringify({ event: "from_unknown" });
+      expect(verifyMetaWebhookSignature(body, signedHeader(body, "unknown_secret"))).toBe(false);
+    });
+  });
+
   describe("fail-closed when secret is missing", () => {
     const originalSecret = process.env.META_APP_SECRET;
     beforeEach(() => {
