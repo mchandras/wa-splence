@@ -457,13 +457,13 @@ async function handleStatusUpdate(status: {
   //    the owning account for delivery.
   const { data: msgRow } = await supabaseAdmin()
     .from('messages')
-    .select('conversation_id, conversations(account_id)')
+    .select('conversation_id, conversations(account_id, contact_id)')
     .eq('message_id', status.id)
     .limit(1)
     .maybeSingle()
 
   if (msgRow) {
-    const conv = msgRow.conversations as { account_id: string } | null
+    const conv = msgRow.conversations as { account_id?: string; contact_id?: string } | null
     const accountId = conv?.account_id
     if (accountId) {
       await dispatchWebhookEvent(
@@ -476,6 +476,33 @@ async function handleStatusUpdate(status: {
           status: status.status,
         }
       )
+    }
+
+    // If an outbound message failed, mirror the failure details into automation_logs
+    if (status.status === 'failed' && conv?.account_id && conv?.contact_id) {
+      const errObj = status.errors?.[0]
+      const errMsg = errObj
+        ? `${errObj.title || errObj.message || 'Delivery failed'} (code: ${errObj.code})`
+        : 'Meta delivery failed'
+
+      const { data: latestLog } = await supabaseAdmin()
+        .from('automation_logs')
+        .select('id')
+        .eq('account_id', conv.account_id)
+        .eq('contact_id', conv.contact_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (latestLog) {
+        await supabaseAdmin()
+          .from('automation_logs')
+          .update({
+            status: 'failed',
+            error_message: errMsg,
+          })
+          .eq('id', latestLog.id)
+      }
     }
   }
 }
